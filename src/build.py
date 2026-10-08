@@ -38,8 +38,8 @@ ICONS = [
 HEAD = """<!doctype html><html lang="fr"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#E9EDF1" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E161D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFE9F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1A0B16" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -51,7 +51,7 @@ HEAD = """<!doctype html><html lang="fr"><head>
 <style>/* reset that the original host provided */
 :root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html,body{-webkit-text-size-adjust:100%}
-body{margin:0;font:14px/1.4 system-ui,-apple-system,sans-serif;background:#fafafa}
+body{margin:0;font:14px/1.4 system-ui,-apple-system,sans-serif;background:#FFE9F0}
 img{max-width:100%}
 [hidden]{display:none!important}
 </style>
@@ -69,8 +69,8 @@ MANIFEST = {
     "start_url": "./",
     "scope": "./",
     "display": "standalone",
-    "background_color": "#E9EDF1",
-    "theme_color": "#0B6E7C",
+    "background_color": "#FFE9F0",
+    "theme_color": "#FFE9F0",
     "icons": [
         {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
         {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
@@ -143,45 +143,75 @@ async function staleWhileRevalidate(req) {
 
 
 def draw_icon(px, maskable=False):
-    """Clock face with a 75% progress ring on a solid teal square."""
+    """Liquid-glass icon: pink gradient, glass disc, white clock and progress arc."""
     n = px * SUPERSAMPLE
     k = MASKABLE_SCALE if maskable else 1.0
-    img = Image.new("RGB", (n, n), TEAL)
-    d = ImageDraw.Draw(img)
+    top, bot = (255, 193, 214), (232, 51, 111)
+    grad = Image.new("RGB", (1, n))
+    grad.putdata([tuple(round(t + (u - t) * y / (n - 1)) for t, u in zip(top, bot)) for y in range(n)])
+    img = grad.resize((n, n)).convert("RGBA")
     c = n / 2
 
+    def layer():
+        return Image.new("RGBA", (n, n), (0, 0, 0, 0))
+
     def L(frac):
-        """Fraction of the icon width -> supersampled pixels."""
         return frac * k * n
 
-    def box(radius):
-        return [round(c - radius), round(c - radius), round(c + radius), round(c + radius)]
+    # soft white bloom, top-left
+    bloom = Image.new("L", (n, n), 0)
+    bd = ImageDraw.Draw(bloom)
+    bx, by, br = n * 0.22, n * 0.18, n * 0.55
+    steps = 60
+    for i in range(steps):
+        r = br * (1 - i / steps)
+        bd.ellipse([bx - r, by - r, bx + r, by + r], fill=round(110 * (i + 1) / steps / 1.0 * 0.55))
+    img = Image.alpha_composite(img, Image.merge("RGBA", (Image.new("L", (n, n), 255),) * 3 + (bloom,)))
 
-    # Progress ring: faint full track, then a white arc sweeping 75% clockwise from 12 o'clock.
-    ring_c, ring_w = L(0.42), max(1, round(L(0.036)))
-    ring_box = box(ring_c + ring_w / 2)  # PIL strokes inward from the bbox edge
-    d.ellipse(ring_box, outline=TRACK, width=ring_w)
-    d.arc(ring_box, start=-90, end=180, fill=WHITE, width=ring_w)
+    # glass disc + rim
+    disc = layer(); dd = ImageDraw.Draw(disc)
+    R = L(0.40)
+    dd.ellipse([c - R, c - R, c + R, c + R], fill=(255, 255, 255, 71))
+    rim_w = max(1, round(0.012 * px * SUPERSAMPLE * k))
+    dd.ellipse([c - R, c - R, c + R, c + R], outline=(255, 255, 255, 153), width=rim_w)
+    img = Image.alpha_composite(img, disc)
 
-    # Clock face outline.
-    face_c, face_w = L(0.30), max(1, round(L(0.065)))
-    d.ellipse(box(face_c + face_w / 2), outline=WHITE, width=face_w)
+    d = ImageDraw.Draw(img)
+    # progress arc ~70%
+    ar = L(0.33); aw = max(1, round(L(0.036)))
+    ab = [round(c - ar), round(c - ar), round(c + ar), round(c + ar)]
+    d.arc(ab, start=-90, end=-90 + 252, fill=(255, 255, 255, 255), width=aw)
+    for ang in (-90, -90 + 252):
+        a = math.radians(ang)
+        ex, ey = c + (ar - aw / 2) * math.cos(a), c + (ar - aw / 2) * math.sin(a)
+        d.ellipse([ex - aw / 2, ey - aw / 2, ex + aw / 2, ey + aw / 2], fill=(255, 255, 255, 255))
 
     def hand(angle_deg, length, width):
-        a = math.radians(angle_deg)  # clockwise from 12 o'clock
+        a = math.radians(angle_deg)
         tx, ty = c + length * math.sin(a), c - length * math.cos(a)
         w = max(1, round(width))
         d.line([(c, c), (tx, ty)], fill=WHITE, width=w)
         r = w / 2
-        d.ellipse([tx - r, ty - r, tx + r, ty + r], fill=WHITE)  # round tip
+        d.ellipse([tx - r, ty - r, tx + r, ty + r], fill=WHITE)
+        d.ellipse([c - r, c - r, c + r, c + r], fill=WHITE)
 
-    hand(0, L(0.22), L(0.05))    # minute hand at 12
-    hand(300, L(0.14), L(0.06))  # hour hand at 10
-
-    dot = L(0.045)
+    hand(0, L(0.21), L(0.05))
+    hand(120, L(0.14), L(0.06))
+    dot = L(0.04)
     d.ellipse([c - dot, c - dot, c + dot, c + dot], fill=WHITE)
 
-    return img.resize((px, px), Image.LANCZOS)
+    # top-half sheen, clipped to the disc and faded downward
+    sh = Image.new("L", (n, n), 0)
+    sd = ImageDraw.Draw(sh)
+    sd.ellipse([c - R * 0.92, c - R * 0.98, c + R * 0.92, c + R * 0.05], fill=56)
+    fade = Image.linear_gradient("L").resize((n, n))  # black top -> white bottom
+    fade = fade.point(lambda v: 255 - v)
+    sh = Image.composite(sh, Image.new("L", (n, n), 0), fade)
+    white = Image.new("RGBA", (n, n), (255, 255, 255, 255))
+    white.putalpha(sh)
+    img = Image.alpha_composite(img, white)
+
+    return img.convert("RGB").resize((px, px), Image.LANCZOS)
 
 
 def png_bytes(img):
