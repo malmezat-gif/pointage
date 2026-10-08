@@ -1,0 +1,819 @@
+<!doctype html><html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#E9EDF1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E161D" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pointage">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<style>/* reset that the original host provided */
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{-webkit-text-size-adjust:100%}
+body{margin:0;font:14px/1.4 system-ui,-apple-system,sans-serif;background:#fafafa}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+</head><body>
+<title>Mon Pointage</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+/* Mon Pointage : un instrument calme. Le gros compte à rebours en haut, l'action principale sous le pouce, le reste en lecture d'abord. */
+:root {
+  --bg: #E9EDF1;
+  --surface: #F7F9FB;
+  --ink: #13202B;
+  --muted: #566675;
+  --line: #C9D3DB;
+  --track: #D3DCE3;
+  --accent: #0B6E7C;
+  --accent-ink: #FFFFFF;
+  --ok: #1B7F47;
+  --warn: #A5620C;
+  --scrim: rgba(19, 32, 43, .45);
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E161D; --surface: #16212A; --ink: #E6EDF2; --muted: #93A4B2; --line: #2A3844; --track: #263440;
+    --accent: #57C2CF; --accent-ink: #06222A; --ok: #5BC98A; --warn: #E3A64A; --scrim: rgba(0, 0, 0, .6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E161D; --surface: #16212A; --ink: #E6EDF2; --muted: #93A4B2; --line: #2A3844; --track: #263440;
+  --accent: #57C2CF; --accent-ink: #06222A; --ok: #5BC98A; --warn: #E3A64A; --scrim: rgba(0, 0, 0, .6);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html.sheet-open { overflow: hidden; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  padding-inline: 16px; padding-block: 16px 150px;
+}
+.app { width: min(560px, 100%); margin-inline: auto; display: grid; gap: 24px; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+h1, h2, p { margin: 0; }
+h2 { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+
+/* En-tête */
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.top > div { min-width: 0; display: grid; gap: 6px; justify-items: start; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; letter-spacing: -.01em; text-wrap: balance; }
+.pill { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; padding: 4px 12px 4px 10px; border-radius: 999px; border: 1.5px solid var(--line); color: var(--muted); white-space: nowrap; transition: color .2s, border-color .2s; }
+.pill i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.pill.live, .pill.done { color: var(--ok); border-color: var(--ok); }
+.pill.pause { color: var(--warn); border-color: var(--warn); }
+.pill.live i { animation: pulse 1.6s ease-in-out infinite; }
+.icon { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); }
+
+/* Bandeau oubli de la veille */
+.banner { border: 1.5px solid var(--warn); border-radius: 12px; padding: 14px; display: grid; gap: 10px; }
+.banner .line { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
+
+/* Héros */
+.clock { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 16px; display: grid; gap: 12px; }
+.label { color: var(--muted); font-size: 14px; }
+.big { margin-top: -4px; font-family: var(--font-data); font-weight: 500; font-size: clamp(2.9rem, 17vw, 4.6rem); line-height: 1.05; letter-spacing: -.03em; transition: color .2s; }
+.big.done { color: var(--ok); }
+.when { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; line-height: 1.3; }
+.fait { color: var(--muted); font-size: 14px; }
+.bar { position: relative; height: 14px; border-radius: 7px; background: var(--track); overflow: hidden; }
+.bar i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); transition: width .2s linear, background .2s; }
+.bar.done i { background: var(--ok); }
+.bar b { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--surface); opacity: .85; }
+
+/* Frise du jour */
+.tl { position: relative; height: 26px; border-radius: 6px; background: var(--track); }
+.tl i { position: absolute; top: 0; bottom: 0; border-radius: 4px; min-width: 2px; }
+.tl .work { background: var(--accent); }
+.tl .gap { background: repeating-linear-gradient(135deg, var(--muted) 0 1.5px, transparent 1.5px 6px); opacity: .55; }
+.tl .proj { border: 2px dashed var(--accent); }
+.tl b { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--ink); border-radius: 1px; }
+.tl-h { position: relative; height: 16px; margin-top: -4px; font-size: 11px; color: var(--muted); }
+.tl-h span { position: absolute; transform: translateX(-50%); }
+
+/* Semaine */
+.whead { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; gap: 4px; margin-bottom: 8px; }
+.whead .mid { text-align: center; display: grid; }
+.whead .mid span:first-child { font-weight: 500; }
+.whead .mid span:last-child { font-size: 13px; color: var(--muted); }
+.nav { width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid var(--line); background: transparent; font-size: 22px; line-height: 1; }
+.nav:disabled { opacity: .35; cursor: default; }
+.week { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 6px; align-items: end; }
+.day { display: grid; gap: 4px; justify-items: center; text-align: center; font-size: 12px; color: var(--muted); background: none; border: 0; padding: 2px 0; min-height: 44px; }
+.day .col { position: relative; width: 100%; height: 84px; border-radius: 6px; background: var(--track); overflow: hidden; }
+.day .col i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--accent); transition: height .2s; }
+.day .col u { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--ink); opacity: .55; }
+.day .v { font-family: var(--font-data); color: var(--ink); }
+.day .n { padding: 1px 4px; border-radius: 6px; }
+.day.today .col { outline: 2px solid var(--ink); outline-offset: 1px; }
+.day.sel .n { background: var(--ink); color: var(--bg); }
+.day:disabled { opacity: .35; cursor: default; }
+.wsum { margin-top: 12px; display: grid; gap: 4px; }
+.wsum .sub { color: var(--muted); }
+.chip-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.chip { display: inline-block; font-size: 13px; font-weight: 500; padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--line); color: var(--muted); }
+.chip.up { color: var(--ok); border-color: var(--ok); }
+.chip.down { color: var(--warn); border-color: var(--warn); }
+.tiny { font-size: 12px; color: var(--muted); }
+
+/* Détail du jour */
+.dhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.dhead .tot { font-family: var(--font-data); font-size: 15px; }
+.empty { color: var(--muted); }
+.plages { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.plage { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.prow { width: 100%; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 14px; background: transparent; border: 0; text-align: left; font-family: var(--font-data); font-size: 15px; }
+.prow .hint { font-family: var(--font-body); font-size: 13px; color: var(--muted); flex: none; }
+.live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); margin-right: 6px; animation: pulse 1.6s ease-in-out infinite; }
+.pause { padding: 2px 14px 2px 18px; color: var(--muted); font-size: 13px; border-left: 2px dotted var(--line); margin-left: 14px; }
+.editor, .addform { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px 12px; padding: 4px 14px 14px; }
+.addform { padding: 12px 0 0; }
+.fld { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+input[type="time"], input[type="number"] { width: 100%; min-height: 44px; padding: 0 10px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font-family: var(--font-data); font-size: 16px; }
+.ghost { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; font-weight: 500; transition: background .2s, color .2s; }
+.ghost.ok { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.ghost.danger { color: var(--warn); border-color: var(--warn); }
+.ghost.danger.armed { background: var(--warn); color: var(--accent-ink); }
+.link { min-height: 44px; padding: 0 4px; background: none; border: 0; color: var(--accent); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Barre d'action */
+.actionbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+.actionbar > div { position: relative; width: min(560px, 100%); margin-inline: auto; }
+.primary { width: 100%; min-height: 64px; border: 0; border-radius: 14px; display: grid; gap: 1px; align-content: center; justify-items: center; background: var(--accent); color: var(--accent-ink); transition: background .2s, color .2s; }
+.primary.out { background: var(--ink); color: var(--bg); }
+.primary .pl { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; line-height: 1.2; }
+.primary .ps { font-size: 13px; opacity: .9; }
+.toast { position: absolute; left: 0; right: 0; bottom: calc(100% + 10px); display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 4px 6px 4px 14px; border-radius: 12px; background: var(--ink); color: var(--bg); animation: rise .15s ease-out; }
+.toast.err { background: var(--warn); color: var(--accent-ink); }
+.toast button { min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1.5px solid currentColor; background: transparent; font-weight: 500; flex: none; }
+.toast :focus-visible { outline-color: var(--bg); }
+
+/* Réglages */
+.scrim { position: fixed; inset: 0; z-index: 40; background: var(--scrim); display: flex; align-items: flex-end; justify-content: center; }
+.panel { width: min(560px, 100%); max-height: 88vh; overflow-y: auto; background: var(--bg); border-radius: 18px 18px 0 0; padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 18px; animation: sheet .2s ease-out; }
+.phead { display: flex; justify-content: space-between; align-items: center; }
+.phead h2 { font-size: 14px; }
+.group { display: grid; gap: 8px; }
+.chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.preset { min-height: 48px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); font-family: var(--font-data); font-size: 15px; }
+.preset[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.qrow { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+.dur-in { display: grid; grid-template-columns: 64px auto 64px auto; gap: 6px; align-items: center; color: var(--muted); }
+.setmsg { color: var(--warn); font-size: 14px; min-height: 1.4em; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@keyframes pulse { 50% { opacity: .3; } }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+@keyframes sheet { from { transform: translateY(24px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+
+<main class="app">
+  <header class="top">
+    <div>
+      <h1 id="date">Aujourd'hui</h1>
+      <span class="pill" id="status"><i></i><span>Pas commencé</span></span>
+    </div>
+    <button class="icon" id="gear" type="button" data-act="open-settings" aria-label="Réglages" aria-haspopup="dialog">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h1M11 17h9"/><circle cx="16" cy="7" r="2.5"/><circle cx="8" cy="17" r="2.5"/></svg>
+    </button>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="clock" aria-label="Temps restant aujourd'hui">
+    <p class="label" id="label">Temps restant aujourd'hui</p>
+    <p class="big" id="big">07:36:00</p>
+    <p class="when" id="when"></p>
+    <div class="bar" id="bar" role="progressbar" aria-label="Quota du jour" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="fill"></i><span id="ticks"></span></div>
+    <p class="fait" id="fait"></p>
+    <div>
+      <div class="tl" id="tl" role="img" aria-label="Frise de la journée"></div>
+      <div class="tl-h" id="tlh"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="whead">
+      <button class="nav" type="button" data-act="week-prev" aria-label="Semaine précédente">&lsaquo;</button>
+      <div class="mid"><span id="wtitle">Cette semaine</span><span id="wrange"></span></div>
+      <button class="nav" id="wnext" type="button" data-act="week-next" aria-label="Semaine suivante">&rsaquo;</button>
+    </div>
+    <div class="week" id="week"></div>
+    <div class="wsum" id="wsum"></div>
+  </section>
+
+  <section id="detail"></section>
+</main>
+
+<div class="actionbar">
+  <div>
+    <div class="toast" id="toast" role="status" hidden><span id="toastText"></span><button type="button" id="toastUndo" data-act="undo">Annuler</button></div>
+    <button class="primary" id="toggle" type="button" data-act="toggle"><span class="pl">Pointer l'arrivée</span><span class="ps"></span></button>
+  </div>
+</div>
+
+<div class="scrim" id="sheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="phead"><h2 id="sheetTitle">Réglages</h2><button class="ghost" id="closeSheet" type="button" data-act="close-settings">Fermer</button></div>
+
+    <div class="group">
+      <h2>Régime</h2>
+      <div class="chips">
+        <button class="preset" type="button" data-act="preset" data-q="456" data-w="2280" aria-pressed="false">7 h 36 · 38 h</button>
+        <button class="preset" type="button" data-act="preset" data-q="450" data-w="2160" aria-pressed="false">7 h 30 · 36 h</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Quotas personnalisés</h2>
+      <div class="qrow"><span>Par jour</span>
+        <div class="dur-in"><input type="number" id="qh" min="0" max="24" inputmode="numeric" aria-label="Heures par jour"><span>h</span><input type="number" id="qm" min="0" max="59" inputmode="numeric" aria-label="Minutes par jour"><span>min</span></div></div>
+      <div class="qrow"><span>Par semaine</span>
+        <div class="dur-in"><input type="number" id="wh" min="1" max="100" inputmode="numeric" aria-label="Heures par semaine"><span>h</span><input type="number" id="wm" min="0" max="59" inputmode="numeric" aria-label="Minutes par semaine"><span>min</span></div></div>
+      <p class="setmsg" id="setMsg" role="status"></p>
+    </div>
+
+    <div class="group">
+      <h2>Données</h2>
+      <p id="sync"></p>
+      <div class="btns" id="localTools" hidden>
+        <button class="ghost" type="button" data-act="export">Exporter une sauvegarde</button>
+        <button class="ghost" type="button" data-act="import-pick">Importer</button>
+        <input type="file" id="file" accept="application/json,.json" class="sr" tabindex="-1" aria-hidden="true">
+      </div>
+      <div id="importBox"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var LS = 'pointage-v1', H = 3600000, MIN = 60000;
+  var state = { quotaMin: 456, weekMin: 2280, days: {} };
+  var sync = 'local';
+  var cloudDoc = null, saving = false, again = false, timer = null;
+  var currentKey = '', lastMinute = -1, lastStatus = '';
+  var selKey = null, weekOffset = 0, editing = null, addOpen = false;
+  var armed = null, armTimer = null, undoSnap = null, toastTimer = null, importPending = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* LOGIC:START */
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function dayKey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function fromKey(k) { var a = k.split('-').map(Number); return new Date(a[0], a[1] - 1, a[2]); }
+  function toMs(key, t) {
+    var a = key.split('-').map(Number), b = t.split(':').map(Number);
+    return new Date(a[0], a[1] - 1, a[2], b[0], b[1]).getTime();
+  }
+  function hhmm(ms) { var d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function clock(ms) {
+    var s = Math.max(0, Math.floor(ms / 1000));
+    return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor(s % 3600 / 60)) + ':' + pad(s % 60);
+  }
+  function hm(ms) { var m = Math.round(ms / 60000); return Math.floor(m / 60) + ' h ' + pad(m % 60); }
+  function hmShort(ms) { var m = Math.round(ms / 60000); return Math.floor(m / 60) + ':' + pad(m % 60); }
+  function minText(ms) { var m = Math.round(ms / 60000); return m < 60 ? m + ' min' : hm(ms); }
+  function dowOf(d) { return (d.getDay() + 6) % 7; } /* lundi = 0 */
+  function workedMs(ss, now) {
+    return ss.reduce(function (t, x) { return t + Math.max(0, (x.b == null ? now : x.b) - x.a); }, 0);
+  }
+  function openOf(ss) { return ss.filter(function (x) { return x.b == null; })[0] || null; }
+  function remainingMs(quotaMs, w) { return quotaMs - w; }
+  function dayStatus(ss, w, q) { return w >= q ? 'done' : openOf(ss) ? 'live' : ss.length ? 'pause' : 'idle'; }
+  function daysLeft(dow) { return dow <= 4 ? 5 - dow : 0; } /* d'aujourd'hui à vendredi inclus */
+  function pastWorkdays(dow) { return Math.min(dow, 5); } /* lundi..vendredi strictement avant aujourd'hui */
+  function weekBalanceMs(totalMs, quotaMs, past) { return totalMs - quotaMs * past; }
+  function timelineBounds(ss, now, projEnd, day0) {
+    var lo = 7, hi = 20;
+    ss.forEach(function (x) {
+      lo = Math.min(lo, Math.floor((x.a - day0) / H));
+      hi = Math.max(hi, Math.ceil(((x.b == null ? now : x.b) - day0) / H));
+    });
+    lo = Math.min(lo, Math.floor((now - day0) / H));
+    hi = Math.max(hi, Math.ceil((now - day0) / H));
+    if (projEnd) hi = Math.max(hi, Math.ceil((projEnd - day0) / H));
+    lo = Math.max(0, lo); hi = Math.min(24, Math.max(hi, lo + 1));
+    return { lo: lo, hi: hi };
+  }
+  /* LOGIC:END */
+
+  var sessions = function (k) { return (state.days[k] && state.days[k].s) || []; };
+  var todayKey = function () { return dayKey(new Date()); };
+  var viewKey = function () { return selKey || todayKey(); };
+  var cap = function (s) { return s.charAt(0).toUpperCase() + s.slice(1); };
+  var longDate = function (d) { return cap(d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })); };
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+
+  /* ---------- messages ---------- */
+  function showToast(text, snapshot, isErr) {
+    undoSnap = snapshot || null;
+    $('toastText').textContent = text;
+    $('toastUndo').hidden = !snapshot;
+    $('toast').classList.toggle('err', !!isErr);
+    $('toast').hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, snapshot ? 6000 : 5000);
+  }
+  function hideToast() { clearTimeout(toastTimer); undoSnap = null; $('toast').hidden = true; }
+  function setMsg(text) { $('setMsg').textContent = text; }
+
+  function arm(name) {
+    armed = name;
+    clearTimeout(armTimer);
+    armTimer = setTimeout(function () { armed = null; renderDetail(); renderImport(); }, 3000);
+  }
+  function disarm() { armed = null; clearTimeout(armTimer); }
+
+  /* ---------- stockage ---------- */
+  function loadLocal() {
+    try {
+      var raw = localStorage.getItem(LS);
+      if (raw) { var d = JSON.parse(raw); if (d && d.days) state = { quotaMin: d.quotaMin || 456, weekMin: d.weekMin || 2280, days: d.days }; }
+    } catch (e) {}
+  }
+  function saveLocal() { try { localStorage.setItem(LS, JSON.stringify(state)); } catch (e) {} }
+  function payload() {
+    var limit = dayKey(new Date(Date.now() - 120 * 864e5)), days = {};
+    Object.keys(state.days).forEach(function (k) { if (k >= limit) days[k] = state.days[k]; });
+    return { v: 1, quotaMin: state.quotaMin, weekMin: state.weekMin, days: days };
+  }
+  function persist() {
+    saveLocal();
+    if (!cloudDoc) return;
+    clearTimeout(timer);
+    timer = setTimeout(function () { timer = null; flush(); }, 500);
+  }
+  async function flush() {
+    if (!cloudDoc) return;
+    if (saving) { again = true; return; }
+    saving = true;
+    try { await cloudDoc.set(payload()); sync = 'cloud'; } catch (e) { sync = 'error'; }
+    saving = false;
+    if (again) { again = false; flush(); }
+    renderSync();
+  }
+  function hasData() { return Object.keys(state.days).length > 0; }
+
+  async function initCloud() {
+    var c = window.claude;
+    if (!c || !c.use) return;
+    try {
+      var res = await Promise.all([c.use('db'), c.use('user')]);
+      var db = res[0], user = res[1];
+      if (!db || !user) return;
+      var id = await user.id();
+      if (!id) return;
+      cloudDoc = db.collection('data/users/' + id).doc('pointage');
+      cloudDoc.onSnapshot(function (snap) {
+        if (snap.metadata.hasPendingWrites || saving || timer) return;
+        if (snap.exists) {
+          var d = JSON.parse(JSON.stringify(snap.data()));
+          state = { quotaMin: d.quotaMin || 456, weekMin: d.weekMin || 2280, days: d.days || {} };
+          saveLocal(); sync = 'cloud'; renderAll();
+        } else {
+          sync = 'cloud';
+          if (hasData()) persist();
+        }
+        renderSync();
+      }, function () { sync = 'error'; renderSync(); });
+    } catch (e) { sync = 'local'; }
+  }
+
+  /* ---------- rendu : héros ---------- */
+  function renderTicks() {
+    var q = state.quotaMin * MIN, h = Math.floor(q / H), out = '';
+    for (var i = 1; i <= h; i++) {
+      var p = i * H / q * 100;
+      if (p < 99.5) out += '<b style="left:calc(' + p.toFixed(3) + '% - 1px)"></b>';
+    }
+    $('ticks').innerHTML = out;
+  }
+
+  function todayFigures() {
+    var now = Date.now(), q = state.quotaMin * MIN, ss = sessions(todayKey()), w = workedMs(ss, now);
+    return { now: now, q: q, ss: ss, w: w, rem: remainingMs(q, w), st: dayStatus(ss, w, q) };
+  }
+
+  function renderCountdown() {
+    var f = todayFigures(), done = f.st === 'done', pct = Math.min(100, f.w / f.q * 100);
+    $('big').textContent = clock(f.rem);
+    $('big').classList.toggle('done', done);
+    $('fill').style.width = pct.toFixed(2) + '%';
+    $('bar').classList.toggle('done', done);
+    $('bar').setAttribute('aria-valuenow', String(Math.round(pct)));
+    Array.prototype.forEach.call(document.querySelectorAll('[data-live]'), function (el) { el.textContent = hm(f.now - Number(el.dataset.a)); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-total]'), function (el) { el.textContent = hm(f.w); });
+    if (f.st !== lastStatus) renderMain();
+  }
+
+  function whenText(f) {
+    if (f.st === 'done') { var extra = f.w - f.q; return extra >= MIN ? '+' + hm(extra) + ' en plus' : 'Journée complète'; }
+    if (f.st === 'live') return 'Tu peux partir à ' + hhmm(f.now + f.rem);
+    if (f.st === 'pause') return 'Si tu reviens maintenant, fin à ' + hhmm(f.now + f.rem);
+    return 'Si tu arrives maintenant, fin à ' + hhmm(f.now + f.rem);
+  }
+
+  var STATUS = {
+    idle: ['', 'Pas commencé'], live: ['live', 'Présent'], pause: ['pause', 'En pause'], done: ['done', 'Quota atteint']
+  };
+
+  function renderStatus(f) {
+    var s = STATUS[f.st], el = $('status');
+    el.className = 'pill' + (s[0] ? ' ' + s[0] : '');
+    el.lastChild.textContent = s[1];
+  }
+
+  function renderButton(f) {
+    var open = openOf(f.ss), last = f.ss[f.ss.length - 1], b = $('toggle'), title, sub;
+    if (open) { title = 'Pointer le départ'; sub = 'Présent depuis ' + hhmm(open.a); }
+    else if (last) { title = 'Pointer le retour'; sub = 'En pause depuis ' + hhmm(last.b) + ' · ' + minText(f.now - last.b); }
+    else { title = 'Pointer l\'arrivée'; sub = 'Journée de ' + hm(f.q); }
+    b.classList.toggle('out', !!open);
+    b.firstChild.textContent = title;
+    b.lastChild.textContent = sub;
+  }
+
+  function segStyle(day0, from, span, a, b) {
+    var p = function (ms) { return Math.min(100, Math.max(0, (ms - day0 - from) / span * 100)); };
+    var l = p(a);
+    return 'left:' + l.toFixed(3) + '%;width:' + (p(b) - l).toFixed(3) + '%';
+  }
+
+  function renderTimeline(f) {
+    var day0 = toMs(todayKey(), '00:00'), proj = f.st === 'done' ? null : f.now + f.rem;
+    var bd = timelineBounds(f.ss, f.now, proj, day0), from = bd.lo * H, span = (bd.hi - bd.lo) * H, out = '', labels = '';
+    var seg = function (cls, a, b) { return '<i class="' + cls + '" style="' + segStyle(day0, from, span, a, b) + '"></i>'; };
+    f.ss.forEach(function (x, i) {
+      var next = f.ss[i + 1];
+      out += seg('work', x.a, x.b == null ? f.now : x.b);
+      if (x.b != null && next && next.a > x.b) out += seg('gap', x.b, next.a);
+    });
+    var last = f.ss[f.ss.length - 1];
+    if (last && last.b != null) out += seg('gap', last.b, f.now);
+    if (proj) out += seg('proj', f.now, proj);
+    out += '<b style="left:' + Math.min(100, Math.max(0, (f.now - day0 - from) / span * 100)).toFixed(3) + '%"></b>';
+    $('tl').innerHTML = out;
+    var step = bd.hi - bd.lo > 9 ? 2 : 1;
+    for (var h = bd.lo; h <= bd.hi; h += step) labels += '<span style="left:' + ((h - bd.lo) / (bd.hi - bd.lo) * 100).toFixed(3) + '%">' + h + 'h</span>';
+    $('tlh').innerHTML = labels;
+  }
+
+  function renderMain() {
+    var f = todayFigures();
+    lastStatus = f.st;
+    $('label').textContent = f.st === 'done' ? 'Quota atteint' : 'Temps restant aujourd\'hui';
+    $('when').textContent = whenText(f);
+    $('fait').textContent = 'Fait ' + hm(f.w) + ' sur ' + hm(f.q);
+    renderStatus(f); renderButton(f); renderTimeline(f); renderCountdown();
+  }
+
+  /* ---------- rendu : semaine ---------- */
+  function weekDays(offset) {
+    var t = new Date(), out = [];
+    for (var i = 0; i < 7; i++) {
+      var dd = new Date(t.getFullYear(), t.getMonth(), t.getDate() - dowOf(t) + 7 * offset + i);
+      out.push({ date: dd, key: dayKey(dd) });
+    }
+    return out;
+  }
+  function rangeText(a, b) {
+    var f = function (d, m) { return d.toLocaleDateString('fr-FR', { day: 'numeric', month: m }); };
+    return a.getMonth() === b.getMonth() ? a.getDate() + ' – ' + f(b, 'long') : f(a, 'short') + ' – ' + f(b, 'short');
+  }
+
+  function renderWeek() {
+    var now = Date.now(), today = todayKey(), q = state.quotaMin * MIN, wd = weekDays(weekOffset);
+    var names = ['L', 'M', 'M', 'J', 'V', 'S', 'D'], max = q, total = 0, view = viewKey();
+    wd.forEach(function (x) { x.v = workedMs(sessions(x.key), now); max = Math.max(max, x.v); total += x.v; });
+    $('wtitle').textContent = weekOffset === 0 ? 'Cette semaine' : weekOffset === -1 ? 'Semaine dernière' : 'Il y a ' + (-weekOffset) + ' semaines';
+    $('wrange').textContent = rangeText(wd[0].date, wd[6].date);
+    $('wnext').disabled = weekOffset >= 0;
+    $('week').innerHTML = wd.map(function (x, i) {
+      var future = x.key > today;
+      return '<button type="button" class="day' + (x.key === today ? ' today' : '') + (x.key === view ? ' sel' : '') + '" data-act="pick" data-k="' + x.key + '"' +
+        (future ? ' disabled' : '') + ' aria-pressed="' + (x.key === view) + '" aria-label="' + esc(longDate(x.date) + ', ' + hm(x.v)) + '">' +
+        '<span class="v">' + (x.v ? hmShort(x.v) : '–') + '</span>' +
+        '<span class="col"><i style="height:' + (x.v / max * 100).toFixed(1) + '%"></i><u style="bottom:' + (q / max * 100).toFixed(1) + '%"></u></span>' +
+        '<span class="n">' + names[i] + ' ' + x.date.getDate() + '</span></button>';
+    }).join('');
+
+    var wq = state.weekMin * MIN, left = wq - total, dow = dowOf(new Date()), dl = daysLeft(dow);
+    var html = '<p>Semaine : ' + hm(total) + ' sur ' + hm(wq) + ' · ' + (left > 0 ? 'il reste ' + hm(left) : 'objectif atteint') + '</p>';
+    if (weekOffset === 0 && left > 0 && dl > 0) html += '<p class="sub">Soit ' + hm(left / dl) + ' par jour sur ' + dl + ' jour' + (dl > 1 ? 's' : '') + ' restant' + (dl > 1 ? 's' : '') + '</p>';
+    var past = weekOffset === 0 ? pastWorkdays(dow) : 5;
+    if (!(weekOffset === 0 && past === 0)) {
+      var pastTotal = wd.reduce(function (t, x) { return x.key < today ? t + x.v : t; }, 0);
+      var diff = weekBalanceMs(pastTotal, q, past), tiny = Math.abs(diff) < MIN;
+      html += '<div class="chip-row"><span class="chip ' + (tiny ? '' : diff > 0 ? 'up' : 'down') + '">' +
+        (tiny ? 'À jour' : (diff > 0 ? 'En avance de ' : 'En retard de ') + hm(Math.abs(diff))) + '</span>' +
+        '<span class="tiny">' + (weekOffset === 0 ? 'Écart avec le quota sur les jours terminés, sans aujourd\'hui.' : 'Écart avec le quota sur la semaine.') + '</span></div>';
+    }
+    $('wsum').innerHTML = html;
+  }
+
+  /* ---------- rendu : détail du jour ---------- */
+  function rowHtml(x, i, ss, now) {
+    var out = '', prev = ss[i - 1], open = x.b == null, isEdit = editing === x;
+    if (prev && prev.b != null && x.a > prev.b) out += '<li class="pause">Pause ' + minText(x.a - prev.b) + '</li>';
+    var dur = hm((open ? now : x.b) - x.a);
+    out += '<li class="plage' + (isEdit ? ' open' : '') + '"><button type="button" class="prow" data-act="edit" data-i="' + i + '" aria-expanded="' + isEdit + '">' +
+      '<span>' + hhmm(x.a) + ' → ' + (open ? '<span class="live-dot"></span>en cours' : hhmm(x.b)) + ' · <span' + (open ? ' data-live data-a="' + x.a + '"' : '') + '>' + dur + '</span></span>' +
+      '<span class="hint">' + (isEdit ? 'Fermer' : 'Modifier') + '</span></button>';
+    if (isEdit) {
+      out += '<div class="editor">' +
+        '<label class="fld">Début<input type="time" data-f="a" data-i="' + i + '" value="' + hhmm(x.a) + '"></label>' +
+        '<label class="fld">Fin<input type="time" data-f="b" data-i="' + i + '" value="' + (open ? '' : hhmm(x.b)) + '"></label>' +
+        '<button type="button" class="ghost danger' + (armed === 'del' ? ' armed' : '') + '" data-act="del" data-i="' + i + '">' + (armed === 'del' ? 'Confirmer ?' : 'Supprimer') + '</button>' +
+        '<button type="button" class="ghost ok" data-act="ok">OK</button></div>';
+    }
+    return out + '</li>';
+  }
+
+  function renderDetail() {
+    var k = viewKey(), isToday = k === todayKey(), ss = sessions(k), now = Date.now();
+    var html = '<div class="dhead"><h2>' + esc(isToday ? 'Aujourd\'hui' : longDate(fromKey(k))) + '</h2><span class="tot"' + (isToday ? ' data-total' : '') + '>' + hm(workedMs(ss, now)) + '</span></div>';
+    if (!isToday) html += '<button type="button" class="link" data-act="today">Revenir à aujourd\'hui</button>';
+    if (!ss.length) html += '<p class="empty">' + (isToday ? 'Rien de pointé pour l\'instant.' : 'Aucune plage ce jour-là.') + '</p>';
+    else html += '<ul class="plages">' + ss.map(function (x, i) { return rowHtml(x, i, ss, now); }).join('') + '</ul>';
+    html += '<button type="button" class="link" data-act="add-toggle" aria-expanded="' + addOpen + '">' + (addOpen ? '− Annuler l\'ajout' : '+ Ajouter une plage oubliée') + '</button>';
+    if (addOpen) html += '<form id="addForm" class="addform" autocomplete="off">' +
+      '<label class="fld">Début<input type="time" id="addA" required></label><label class="fld">Fin<input type="time" id="addB" required></label>' +
+      '<button type="submit" class="ghost ok" style="grid-column:1/-1">Ajouter</button></form>';
+    $('detail').innerHTML = html;
+  }
+
+  /* ---------- rendu : bandeau, réglages ---------- */
+  function renderBanner() {
+    var today = todayKey(), found = null;
+    Object.keys(state.days).sort().forEach(function (k) {
+      if (found || k >= today) return;
+      sessions(k).forEach(function (x, i) { if (!found && x.b == null) found = { k: k, i: i, a: x.a }; });
+    });
+    var el = $('banner');
+    if (!found) { el.hidden = true; el.innerHTML = ''; return; }
+    el.hidden = false;
+    el.innerHTML = '<p>Le pointage du ' + esc(longDate(new Date(found.a)).toLowerCase()) + ' (arrivée ' + hhmm(found.a) + ') est resté ouvert. Indique l\'heure de départ pour le clore.</p>' +
+      '<div class="line"><input type="time" id="oldEnd" value="17:00" aria-label="Heure de départ"><button class="ghost" type="button" data-act="close-old" data-k="' + found.k + '" data-i="' + found.i + '">Clore</button></div>';
+  }
+
+  function renderSync() {
+    $('sync').textContent = sync === 'cloud' ? 'Enregistré sur ton compte, disponible sur tes appareils.'
+      : sync === 'error' ? 'Sauvegarde en ligne impossible pour le moment. Les données restent sur cet appareil.'
+      : 'Enregistré sur cet appareil uniquement.';
+  }
+
+  function renderImport() {
+    var box = $('importBox');
+    if (!importPending) { box.innerHTML = ''; return; }
+    var n = Object.keys(importPending.days).length;
+    box.innerHTML = '<p>Fichier valide : ' + n + ' jour' + (n > 1 ? 's' : '') + '. Que faire ?</p><div class="btns">' +
+      '<button class="ghost" type="button" data-act="imp-merge">Fusionner</button>' +
+      '<button class="ghost danger' + (armed === 'imp' ? ' armed' : '') + '" type="button" data-act="imp-replace">' + (armed === 'imp' ? 'Confirmer ?' : 'Remplacer') + '</button>' +
+      '<button class="ghost" type="button" data-act="imp-cancel">Annuler</button></div>' +
+      '<p class="tiny">Fusionner garde tes jours et prend ceux du fichier en cas de doublon. Remplacer efface tout le reste.</p>';
+  }
+
+  function setField(id, v) { var el = $(id); if (document.activeElement !== el) el.value = String(v); }
+  function renderSettings() {
+    setField('qh', Math.floor(state.quotaMin / 60)); setField('qm', state.quotaMin % 60);
+    setField('wh', Math.floor(state.weekMin / 60)); setField('wm', state.weekMin % 60);
+    Array.prototype.forEach.call(document.querySelectorAll('.preset'), function (b) {
+      b.setAttribute('aria-pressed', String(Number(b.dataset.q) === state.quotaMin && Number(b.dataset.w) === state.weekMin));
+    });
+    $('localTools').hidden = !!window.claude;
+    renderSync(); renderImport();
+  }
+
+  function renderAll() {
+    currentKey = todayKey();
+    $('date').textContent = longDate(new Date());
+    renderTicks(); renderBanner(); renderWeek(); renderDetail(); renderMain(); renderSettings();
+  }
+
+  /* ---------- actions ---------- */
+  function ensureDay(k) { if (!state.days[k]) state.days[k] = { s: [] }; return state.days[k].s; }
+  function sortDay(k) { sessions(k).sort(function (a, b) { return a.a - b.a; }); }
+  function snap(k) { return { k: k, d: state.days[k] ? JSON.parse(JSON.stringify(state.days[k])) : null }; }
+  function restore(s) {
+    if (s.d) state.days[s.k] = s.d; else delete state.days[s.k];
+    editing = null; persist(); renderAll();
+  }
+
+  function pointer() {
+    var k = todayKey(), before = snap(k), ss = ensureDay(k), open = openOf(ss), now = Date.now(), text;
+    if (open) { open.b = Math.max(now, open.a); text = 'Départ pointé à '; }
+    else { text = (ss.length ? 'Retour pointé à ' : 'Arrivée pointée à '); ss.push({ a: now, b: null }); }
+    selKey = null; weekOffset = 0; editing = null; disarm();
+    persist(); renderAll(); showToast(text + hhmm(now), before);
+  }
+
+  function pickDay(t) {
+    selKey = t.dataset.k === todayKey() ? null : t.dataset.k;
+    editing = null; addOpen = false; disarm(); renderWeek(); renderDetail();
+  }
+  function moveWeek(delta) {
+    var next = weekOffset + delta;
+    if (next > 0) return;
+    var key = weekDays(next)[dowOf(fromKey(viewKey()))].key;
+    selKey = key >= todayKey() ? null : key;
+    weekOffset = next; editing = null; addOpen = false; disarm(); renderWeek(); renderDetail();
+  }
+  function backToToday() { selKey = null; weekOffset = 0; editing = null; addOpen = false; disarm(); renderAll(); }
+  function toggleEdit(t) {
+    var s = sessions(viewKey())[Number(t.dataset.i)];
+    editing = editing === s ? null : s; disarm(); renderDetail();
+  }
+  function deletePlage(t) {
+    var k = viewKey(), i = Number(t.dataset.i);
+    if (armed !== 'del') { arm('del'); renderDetail(); return; }
+    var before = snap(k);
+    sessions(k).splice(i, 1);
+    if (!sessions(k).length) delete state.days[k];
+    editing = null; disarm(); persist(); renderAll(); showToast('Plage supprimée', before);
+  }
+  function toggleAdd() { addOpen = !addOpen; renderDetail(); if (addOpen) $('addA').focus(); }
+  function closeOld(t) {
+    var k = t.dataset.k, s = sessions(k)[Number(t.dataset.i)], v = $('oldEnd').value;
+    if (!s) return;
+    if (!v) { showToast('Indique une heure de départ.', null, true); return; }
+    var end = toMs(k, v);
+    if (end <= s.a) { showToast('Le départ doit être après l\'arrivée (' + hhmm(s.a) + ').', null, true); return; }
+    s.b = end; persist(); renderAll();
+  }
+  function undo() { if (undoSnap) { var s = undoSnap; hideToast(); restore(s); } }
+
+  function onTimeChange(t) {
+    var k = viewKey(), ss = sessions(k), s = ss[Number(t.dataset.i)];
+    if (!s) return;
+    if (t.dataset.f === 'a') {
+      if (!t.value) { renderDetail(); return; }
+      var a = toMs(k, t.value);
+      if (s.b != null && a >= s.b) showToast('Le début doit être avant la fin.', null, true); else s.a = a;
+    } else if (!t.value) {
+      if (k !== todayKey()) showToast('Un jour passé doit avoir une heure de fin.', null, true);
+      else if (ss.some(function (x) { return x !== s && x.b == null; })) showToast('Une autre plage est déjà ouverte.', null, true);
+      else s.b = null;
+    } else {
+      var b = toMs(k, t.value);
+      if (b <= s.a) showToast('La fin doit être après le début.', null, true); else s.b = b;
+    }
+    sortDay(k); persist(); renderAll();
+  }
+
+  function submitAdd(e) {
+    e.preventDefault();
+    var k = viewKey(), a = toMs(k, $('addA').value), b = toMs(k, $('addB').value);
+    if (!(b > a)) { showToast('La fin doit être après le début.', null, true); return; }
+    var before = snap(k);
+    ensureDay(k).push({ a: a, b: b }); sortDay(k);
+    addOpen = false; persist(); renderAll(); showToast('Plage ajoutée', before);
+  }
+
+  /* ---------- réglages ---------- */
+  var lastFocus = null;
+  function openSettings() {
+    lastFocus = document.activeElement; setMsg(''); renderSettings();
+    $('sheet').hidden = false; document.documentElement.classList.add('sheet-open');
+    $('closeSheet').focus();
+  }
+  function closeSettings() {
+    $('sheet').hidden = true; document.documentElement.classList.remove('sheet-open');
+    importPending = null; disarm(); renderImport();
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  function applyQuotas(dayMin, weekMin) {
+    state.quotaMin = dayMin; state.weekMin = weekMin; persist(); setMsg(''); renderAll();
+  }
+  function onQuotaInput() {
+    var d = Number($('qh').value) * 60 + Number($('qm').value), w = Number($('wh').value) * 60 + Number($('wm').value);
+    if (!(d >= 30 && d <= 1440)) { setMsg('Le quota par jour doit être entre 0 h 30 et 24 h.'); renderSettings(); return; }
+    if (!(w >= 60 && w <= 6000)) { setMsg('Le quota par semaine doit être entre 1 h et 100 h.'); renderSettings(); return; }
+    applyQuotas(Math.round(d), Math.round(w));
+  }
+
+  function exportData() {
+    try {
+      var blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'pointage-' + todayKey() + '.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+      setMsg('');
+    } catch (e) { setMsg('Export impossible ici.'); }
+  }
+  function normalize(d) {
+    if (!d || typeof d !== 'object' || !d.days || typeof d.days !== 'object') return null;
+    var inRange = function (v, lo, hi, dflt) { return typeof v === 'number' && v >= lo && v <= hi ? Math.round(v) : dflt; };
+    var out = { quotaMin: inRange(d.quotaMin, 30, 1440, 456), weekMin: inRange(d.weekMin, 60, 6000, 2280), days: {} };
+    var keys = Object.keys(d.days);
+    for (var i = 0; i < keys.length; i++) {
+      var s = d.days[keys[i]] && d.days[keys[i]].s, clean = [];
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(keys[i]) || !Array.isArray(s)) return null;
+      for (var j = 0; j < s.length; j++) {
+        var x = s[j];
+        if (!x || typeof x.a !== 'number' || !isFinite(x.a)) return null;
+        if (x.b != null && (typeof x.b !== 'number' || !isFinite(x.b))) return null;
+        clean.push({ a: x.a, b: x.b == null ? null : x.b });
+      }
+      out.days[keys[i]] = { s: clean };
+    }
+    return out;
+  }
+  function onFile(e) {
+    var f = e.target.files && e.target.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      var data = null;
+      try { data = normalize(JSON.parse(String(r.result))); } catch (err) {}
+      importPending = data; disarm();
+      setMsg(data ? '' : 'Ce fichier n\'est pas une sauvegarde valide.');
+      renderImport();
+    };
+    r.onerror = function () { setMsg('Lecture du fichier impossible.'); };
+    r.readAsText(f);
+    e.target.value = '';
+  }
+  function importMerge() {
+    Object.keys(importPending.days).forEach(function (k) { state.days[k] = importPending.days[k]; });
+    finishImport('Sauvegarde fusionnée.');
+  }
+  function importReplace() {
+    if (armed !== 'imp') { arm('imp'); renderImport(); return; }
+    state = importPending; finishImport('Sauvegarde importée.');
+  }
+  function finishImport(msg) {
+    importPending = null; disarm(); editing = null; persist(); renderAll(); setMsg(msg);
+  }
+
+  var ACTIONS = {
+    'toggle': pointer, 'undo': undo, 'pick': pickDay, 'week-prev': function () { moveWeek(-1); }, 'week-next': function () { moveWeek(1); },
+    'today': backToToday, 'edit': toggleEdit, 'ok': function () { editing = null; disarm(); renderDetail(); },
+    'del': deletePlage, 'add-toggle': toggleAdd, 'close-old': closeOld,
+    'open-settings': openSettings, 'close-settings': closeSettings,
+    'preset': function (t) { applyQuotas(Number(t.dataset.q), Number(t.dataset.w)); },
+    'export': exportData, 'import-pick': function () { $('file').click(); },
+    'imp-merge': importMerge, 'imp-replace': importReplace,
+    'imp-cancel': function () { importPending = null; disarm(); renderImport(); }
+  };
+
+  document.addEventListener('click', function (e) {
+    if (e.target === $('sheet')) { closeSettings(); return; }
+    var t = e.target.closest('[data-act]');
+    if (t && ACTIONS[t.dataset.act]) ACTIONS[t.dataset.act](t);
+  });
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.dataset && t.dataset.f) onTimeChange(t);
+    else if (t.id === 'qh' || t.id === 'qm' || t.id === 'wh' || t.id === 'wm') onQuotaInput();
+  });
+  document.addEventListener('submit', function (e) { if (e.target.id === 'addForm') submitAdd(e); });
+  $('file').addEventListener('change', onFile);
+  document.addEventListener('keydown', function (e) {
+    if ($('sheet').hidden) return;
+    if (e.key === 'Escape') { closeSettings(); return; }
+    if (e.key !== 'Tab') return;
+    var items = Array.prototype.filter.call($('sheet').querySelectorAll('button, input:not(.sr)'), function (el) { return !el.disabled && el.offsetParent !== null; });
+    if (!items.length) return;
+    var first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  /* ---------- horloge ---------- */
+  function tick() {
+    if (todayKey() !== currentKey) { renderAll(); return; }
+    renderCountdown();
+    var m = Math.floor(Date.now() / MIN);
+    if (m !== lastMinute) { lastMinute = m; renderMain(); renderWeek(); }
+  }
+  setInterval(tick, 1000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) tick(); });
+
+  loadLocal();
+  renderAll();
+  initCloud();
+})();
+</script>
+<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}</script>
+</body></html>
